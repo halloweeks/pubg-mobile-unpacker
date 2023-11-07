@@ -1,0 +1,7 @@
+offset: 1893064
+
+$HOME/main map_helicopter_0.19.0.13900.pak
+offset key: 0xA6D17AB4D4783A41
+size key: 0x1FFBEE0AB85196AB
+
+PakFile_Magic = 0x5A6F12E1,
