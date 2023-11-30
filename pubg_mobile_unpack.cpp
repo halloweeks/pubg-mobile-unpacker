@@ -67,6 +67,7 @@ int CreateFile(const char *fullPath) {
     return open(fullPath, O_WRONLY | O_CREAT | O_TRUNC, 0644);
 }
 
+// Decompress Zlib Block
 int32_t DecompressBlock(const uint8_t *CompressedData, uint32_t CompressedSize, uint8_t *DecompressedData, uint32_t DecompressedSize) {
     z_stream strm;
     strm.zalloc = Z_NULL;
@@ -104,6 +105,11 @@ void read_data(void *destination, const uint8_t *source, size_t length) {
 }
 
 int main(int argc, const char *argv[]) {
+	clock_t start, end;
+    double cpu_time_used;
+
+    start = clock();
+	
 	PakInfo info;
 	CompressionBlock Block[100];
 	
@@ -180,7 +186,8 @@ int main(int argc, const char *argv[]) {
 	read_data(&MountPointLength, IndexData, 4);
 	read_data(MountPoint, IndexData, MountPointLength);
 	
-	printf("Mount Point: %s\n", MountPoint);
+	printf("offset\t\tfilesize\t\tfilename\n");
+	printf("--------------------------------------\n");
 	
 	read_data(&NumOfEntry, IndexData, 4);
 	
@@ -214,50 +221,60 @@ int main(int argc, const char *argv[]) {
 		}
 		
 		if (CompressionMethod == 1) {
-			// Zlib compression
+			// Zlib compression 
 			for (uint32_t x = 0; x < NumOfBlocks; x++) {
 				if (lseek(PakFile, Block[x].CompressedStart, SEEK_SET) == -1) {
 					printf("Failed to seek \n");
 					continue;
 				}
 				
+				// A allocate memory for data
 				uint8_t *CompressedData = (uint8_t*)malloc(Block[x].CompressedEnd - Block[x].CompressedStart);
 				uint8_t *DecompressedData = (uint8_t*)malloc(FileSize);
 				
+				// when memory allocation failed
 				if (!CompressedData && !DecompressedData) {
 					printf("Memory allocation failed\n");
 					close(OutFile);
 					continue;
 				}
 				
+				// Read compressed block
 				if (read(PakFile, CompressedData, Block[x].CompressedEnd - Block[x].CompressedStart) != Block[x].CompressedEnd - Block[x].CompressedStart) {
 					printf("Unable to read compressed block data\n");
 					continue;
 				}
 				
+				// if the compressed zlib block is encrypted
 				if (Encrypted == true) {
+					// Decrypting the data
 					DecryptData(CompressedData, Block[x].CompressedEnd - Block[x].CompressedStart);
 				}
 				
+				// decompress zlib block
 				int32_t result = DecompressBlock(CompressedData, Block[x].CompressedEnd - Block[x].CompressedStart, DecompressedData, FileSize);
 				
+				// if decompression was failed
 				if (result == -1) {
 					printf("Failed to decompress zlib block\n");
 					continue;
 				}
 				
+				// write uncompress data
 				if (write(OutFile, DecompressedData, result) != result) {
 					printf("Failed to write data into %s\n", Filename);
 					continue;
 				}
 				
+				// free memory allocation
 				free(CompressedData);
 				free(DecompressedData);
 				
-				printf("file: %s\n", Filename);
+				// print filename as output
+				printf("%016lx %lu\t%s\n", Block[x].CompressedStart, (Block[x].CompressedEnd - Block[x].CompressedStart), Filename);
 			}
 		} else if (CompressionMethod == 0) {
-			// No compression
+			// No compression just Extract data chunk by chunk
 			uint8_t buf[BUFFER_SIZE];
 			uint64_t remaining = FileSize;
 			ssize_t bytesRead, bytesWritten;
@@ -277,7 +294,7 @@ int main(int argc, const char *argv[]) {
 				}
 				remaining -= bytesRead;
 			}
-			printf("file: %s\n", Filename);
+			printf("%016lx %lu\t%s\n", FileOffset, FileSize, Filename);
 		} else {
 			// Using another compression method like Zstd, Oodles, lz4
 			printf("Unsupported the compression method\n");
@@ -285,10 +302,14 @@ int main(int argc, const char *argv[]) {
 		}
 	}
 	
-	printf("Number of files: %d\n", NumOfEntry);
-	
 	// closing pak file
 	close(PakFile);
+	
+	end = clock();
+    cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
+    
+	// print number of files in the pak files
+	printf("%u files found in %f seconds\n", NumOfEntry, cpu_time_used);
 	return 0;
 }
 
