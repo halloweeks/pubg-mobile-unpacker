@@ -4,7 +4,7 @@
  *  Description: Extract pubg mobile pak contents and 
  *  the program not support extract pak after
  *  1.1.0 update of pubg mobile because change
- *  encryption algorithms and I don't know the algorithm and key 
+ *  encryption algorithms and I don't know the algorithm and key
  *  GitHub: https://github.com/halloweeks/pubg-mobile-pak-extract
 */
 
@@ -17,9 +17,9 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <string.h>
-#include <zlib.h>
-#include <filesystem>
-#include <openssl/evp.h>
+#include <zlib.h> // For compress and decompress zlib data
+#include <filesystem> // C++ Filesystem c++17
+// #include <openssl/evp.h> // Openssl evp for aes algorithm currently not used
 
 namespace fs = std::filesystem;
 
@@ -70,17 +70,17 @@ int CreateFile(const char *fullPath) {
 }
 
 // Decompress Zlib Block
-int32_t DecompressBlock(const uint8_t *CompressedData, uint32_t CompressedSize, uint8_t *DecompressedData, uint32_t DecompressedSize) {
+int32_t DecompressBlock(uint8_t *CompressedData, uint32_t CompressedSize, uint8_t *DecompressedData, uint32_t DecompressedSize) {
     z_stream strm;
     strm.zalloc = Z_NULL;
     strm.zfree = Z_NULL;
     strm.opaque = Z_NULL;
 
-    strm.avail_in = (uInt)CompressedSize;
-    strm.next_in = (Bytef*)CompressedData;
+    strm.avail_in = CompressedSize;
+    strm.next_in = CompressedData;
 
     strm.avail_out = DecompressedSize;
-    strm.next_out = (Bytef*)DecompressedData;
+    strm.next_out = DecompressedData;
 
     if (inflateInit(&strm) != Z_OK) {
         fprintf(stderr, "Failed to initialize zlib.\n");
@@ -111,7 +111,7 @@ int main(int argc, const char *argv[]) {
     double cpu_time_used;
 
     start = clock();
-	
+    
 	PakInfo info;
 	CompressionBlock Block[100];
 	
@@ -138,18 +138,8 @@ int main(int argc, const char *argv[]) {
 	
 	info.offset = info.offset ^ OFFSET_KEY;
 	
-	// Get pak file size
-	off_t fsize = lseek(PakFile, 0, SEEK_END);
-	
-	// set file pointer into index data
-	if (lseek(PakFile, info.offset, SEEK_SET) == -1) {
-		perror("Error seeking in file");
-        close(PakFile);
-        return 1;
-	}
-	
 	// Calculate the index data size
-	uint32_t IndexSize = fsize - info.offset;
+	uint32_t IndexSize = lseek(PakFile, -info.offset, SEEK_END);
 	
 	// Allocate memory for pak index data
 	uint8_t *IndexData = (uint8_t*)malloc(IndexSize);
@@ -159,6 +149,13 @@ int main(int argc, const char *argv[]) {
 		printf("Failed to memory allocation\n");
 		close(PakFile);
 		return 3;
+	}
+	
+	// set file pointer into index data
+	if (lseek(PakFile, info.offset, SEEK_SET) == -1) {
+		perror("Error seeking in file");
+        close(PakFile);
+        return 1;
 	}
 	
 	// load pak index data
@@ -215,22 +212,24 @@ int main(int argc, const char *argv[]) {
 		read_data(&CompressedBlockSize, IndexData, 4);
 		read_data(&Encrypted, IndexData, 1);
 		
+		// create output files
 		int OutFile = CreateFile(Filename);
 		
+		// Failed
 		if (OutFile == -1) {
 			printf("Failed to open output file: %s\n", Filename);
-			return 1;
+			continue;
 		}
 		
+		// zlib compression
 		if (CompressionMethod == 1) {
-			// Zlib compression 
 			for (uint32_t x = 0; x < NumOfBlocks; x++) {
 				if (lseek(PakFile, Block[x].CompressedStart, SEEK_SET) == -1) {
 					printf("Failed to seek \n");
 					continue;
 				}
 				
-				// A allocate memory for data
+				// allocating memory
 				uint8_t *CompressedData = (uint8_t*)malloc(Block[x].CompressedEnd - Block[x].CompressedStart);
 				uint8_t *DecompressedData = (uint8_t*)malloc(FileSize);
 				
@@ -268,11 +267,11 @@ int main(int argc, const char *argv[]) {
 					continue;
 				}
 				
-				// free memory allocation
+				// release allocated memory
 				free(CompressedData);
 				free(DecompressedData);
 				
-				// print filename as output
+				// print info
 				printf("%016lx %lu\t%s\n", Block[x].CompressedStart, (Block[x].CompressedEnd - Block[x].CompressedStart), Filename);
 			}
 		} else if (CompressionMethod == 0) {
@@ -302,8 +301,8 @@ int main(int argc, const char *argv[]) {
 			}
 			printf("%016lx %lu\t%s\n", FileOffset, FileSize, Filename);
 		} else {
-			// Using another compression method like Zstd, Oodles, lz4
-			printf("Unsupported the compression method\n");
+			// data using another compression method like Zstd, Oodles, etc..
+			printf("Zlib decompression support only\n");
 			continue;
 		}
 	}
