@@ -1,4 +1,3 @@
-# pubg-mobile-pak-extract
 
 # Compile
 
