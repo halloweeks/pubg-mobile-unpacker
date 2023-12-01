@@ -5,7 +5,7 @@
  *  the program not support extract pak after
  *  1.1.0 update of pubg mobile because change
  *  encryption algorithms and I don't know the algorithm and key 
- *  GitHub: https://github.com/halloweeks/
+ *  GitHub: https://github.com/halloweeks/pubg-mobile-pak-extract
 */
 
 #include <iostream>
@@ -19,6 +19,7 @@
 #include <string.h>
 #include <zlib.h>
 #include <filesystem>
+#include <openssl/evp.h>
 
 namespace fs = std::filesystem;
 
@@ -48,6 +49,7 @@ void DecryptData(uint8_t *data, uint32_t size) {
 	}
 }
 
+// Create output files
 int CreateFile(const char *fullPath) {
 	fs::path filePath(fullPath);
 	fs::path extractedPath = filePath.parent_path();
@@ -152,14 +154,14 @@ int main(int argc, const char *argv[]) {
 	// Allocate memory for pak index data
 	uint8_t *IndexData = (uint8_t*)malloc(IndexSize);
 	
-	// if allocation failed
+	// if memory allocation failed
 	if (!IndexData) {
 		printf("Failed to memory allocation\n");
 		close(PakFile);
 		return 3;
 	}
 	
-	// read pak index data
+	// load pak index data
 	if (read(PakFile, IndexData, IndexSize) != IndexSize) {
 		printf("Unable to load index data\n");
 		return 4;
@@ -285,6 +287,10 @@ int main(int argc, const char *argv[]) {
 				
 				if (bytesRead < 0) {
 					printf("Error reading from file\n");
+				}
+				
+				if (Encrypted == true) {
+					DecryptData(buf, bytesToRead);
 				}
 				
 				bytesWritten = write(OutFile, buf, bytesRead);
