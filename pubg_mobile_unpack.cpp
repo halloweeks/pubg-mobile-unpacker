@@ -170,7 +170,7 @@ int main(int argc, const char *argv[]) {
 	uint32_t MountPointLength;
 	char MountPoint[1024];
 	int NumOfEntry;
-	uint32_t FilenameSize;
+	int32_t FilenameSize;
 	char Filename[1024];
 	uint8_t FileHash[20];
 	uint64_t FileOffset = 0;
@@ -196,10 +196,9 @@ int main(int argc, const char *argv[]) {
 		if (FilenameSize > 0 && FilenameSize < 1024) {
 			read_data(Filename, IndexData, FilenameSize);
 		} else {
-			printf("\n\nEncounter with error\n");
-			printf("Filename length: %u byte too long\n", FilenameSize);
-			close(PakFile);
-			return 8;
+			FilenameSize = -FilenameSize;
+			FilenameSize = FilenameSize * 2;
+			read_data(Filename, IndexData, FilenameSize);
 		}
 		
 		read_data(FileHash, IndexData, 20);
