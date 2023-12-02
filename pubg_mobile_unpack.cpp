@@ -138,7 +138,7 @@ int main(int argc, const char *argv[]) {
 	
 	info.offset = info.offset ^ OFFSET_KEY;
 	
-	// Calculate the index data size
+	// Get the index data size
 	uint32_t IndexSize = lseek(PakFile, -info.offset, SEEK_END);
 	
 	// Allocate memory for pak index data
@@ -146,14 +146,14 @@ int main(int argc, const char *argv[]) {
 	
 	// if memory allocation failed
 	if (!IndexData) {
-		printf("Failed to memory allocation\n");
+		printf("Memory allocation failed.\n");
 		close(PakFile);
 		return 3;
 	}
 	
 	// set file pointer into index data
 	if (lseek(PakFile, info.offset, SEEK_SET) == -1) {
-		perror("Error seeking in file");
+		perror("Error seeking in file.");
         close(PakFile);
         return 1;
 	}
@@ -192,7 +192,16 @@ int main(int argc, const char *argv[]) {
 	
 	for (uint32_t Files = 0; Files < NumOfEntry; Files++) {
 		read_data(&FilenameSize, IndexData, 4);
-		read_data(Filename, IndexData, FilenameSize);
+		
+		if (FilenameSize > 0 && FilenameSize < 1024) {
+			read_data(Filename, IndexData, FilenameSize);
+		} else {
+			printf("\n\nEncounter with error\n");
+			printf("Filename length: %u byte too long\n", FilenameSize);
+			close(PakFile);
+			return 8;
+		}
+		
 		read_data(FileHash, IndexData, 20);
 		read_data(&FileOffset, IndexData, 8);
 		read_data(&FileSize, IndexData, 8);
@@ -248,7 +257,7 @@ int main(int argc, const char *argv[]) {
 				
 				// if the compressed zlib block is encrypted
 				if (Encrypted == true) {
-					// Decrypting the data
+					// Decrypt the encrypted zlib block
 					DecryptData(CompressedData, Block[x].CompressedEnd - Block[x].CompressedStart);
 				}
 				
@@ -305,6 +314,8 @@ int main(int argc, const char *argv[]) {
 			printf("Zlib decompression support only\n");
 			continue;
 		}
+		
+		close(OutFile);
 	}
 	
 	// closing pak file
