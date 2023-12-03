@@ -21,6 +21,9 @@
 #include <filesystem> // C++ Filesystem c++17
 // #include <openssl/evp.h> // Openssl evp for aes algorithm currently not used
 
+#include <wchar.h>
+#include <locale.h>
+
 namespace fs = std::filesystem;
 
 // The key use for deobfuscation of index offset
@@ -195,10 +198,14 @@ int main(int argc, const char *argv[]) {
 		
 		if (FilenameSize > 0 && FilenameSize < 1024) {
 			read_data(Filename, IndexData, FilenameSize);
+			
 		} else {
 			FilenameSize = -FilenameSize;
-			FilenameSize = FilenameSize * 2;
-			read_data(Filename, IndexData, FilenameSize);
+			// Unicode or filename contains special characters
+			read_data(Filename, IndexData, FilenameSize * 2);
+			Filename[FilenameSize * 2] = '\0';
+			printf("Warning: not extracting \"%s\" because of suspicious path\n", Filename);
+			sleep(1);
 		}
 		
 		read_data(FileHash, IndexData, 20);
