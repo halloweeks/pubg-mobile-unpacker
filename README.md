@@ -2,7 +2,7 @@
 
 **Description:**
 
-PUBG Mobile Pak Extractor is a C++ program designed to extract contents from PUBG Mobile pak files. This tool is tailored for versions before the 1.1.0 update, as post-update changes in encryption algorithms are not currently supported.
+PUBG Mobile Pak Extractor is a C program designed to extract contents from PUBG Mobile pak files. This tool is tailored for versions before the 1.1.0 update, as post-update changes in encryption algorithms are not currently supported.
 
 **Key Features:**
 
@@ -31,7 +31,7 @@ Ensure compatibility with the version specified, and be aware of the limitations
 To build the executable, use the following command:
 
 ```bash
-g++ pubg_mobile_unpack.cpp -o pubg_mobile_unpack.exe -lz -O2
+cc pubg_mobile_unpack.c -o pubg_mobile_unpack.exe -lz -O2
 ```
 
 **Contributing:**
