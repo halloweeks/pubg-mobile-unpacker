@@ -41,7 +41,3 @@ Contributions are welcome! If you find any issues or have improvements to sugges
 **License:**
 
 This project is licensed under the [MIT License](LICENSE).
-
-**Acknowledgments:**
-
-Special thanks to the open-source community for inspiration and support.
