@@ -4,11 +4,11 @@
 
 PUBG Mobile Pak Extractor is a C program designed to extract contents from PUBG Mobile pak files. This tool is tailored for versions before the 1.1.0 update, as post-update changes in encryption algorithms are not currently supported.
 
-**Key Features:**
+ **Key Features:**
 
 - **Decryption:** Implements XOR decryption for deobfuscation of index offset using a specific key.
 - **Compression Support:** Handles zlib compression for extracting compressed data blocks.
-- **Filesystem Management:** Utilizes C++17 filesystem library for efficient file handling, ensuring extracted files are organized in the correct directory structure.
+- **Filesystem Management:** Utilizes C standard library for efficient file handling, ensuring extracted files are organized in the correct directory structure.
 - **User Interface:** Provides clear console output with information on extracted files, including offset, file size, and filename.
 - **Execution Time:** Displays the number of files found and the overall execution time for the extraction process.
 
