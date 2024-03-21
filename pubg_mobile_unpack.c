@@ -8,6 +8,7 @@
  *  GitHub: https://github.com/halloweeks/pubg-mobile-pak-extract
 */
 
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -23,9 +24,10 @@
 // The key use for deobfuscation of index offset
 #define OFFSET_KEY 0xA6D17AB4D4783A41
 
+
 #define CHUNK_SIZE 65536
 
-// Pak header
+// Pak Header
 typedef struct {
 	uint32_t magic;
 	uint32_t version;
@@ -34,26 +36,20 @@ typedef struct {
 	uint64_t offset;
 } __attribute__((packed)) PakInfo;
 
-// Compression blocks
+// Compression Blocks
 typedef struct {
     uint64_t CompressedStart;
     uint64_t CompressedEnd;
 } __attribute__((packed)) CompressionBlock;
 
-// Decrypt encrypted data it just xor cipher
+// Function to decrypt data
 void DecryptData(uint8_t *data, uint32_t size) {
 	for (uint32_t index = 0; index < size; index++) {
 		data[index] ^= 0x79;
 	}
 }
 
-/**
- * Creates a file at the specified fullPath, including necessary directories.
- *
- * @param fullPath The full path of the file to be created.
- * @return The file descriptor of the created or opened file, or an error code.
- */
- 
+// Function to create a file
 int create_file(const char *fullPath) {
 	const char *lastSlash = strrchr(fullPath, '/');
 	if (lastSlash != NULL) {
@@ -73,16 +69,7 @@ int create_file(const char *fullPath) {
 	return open(fullPath, O_WRONLY | O_CREAT | O_TRUNC, 0644); 
 }
 
-/**
- * Decompresses data using zlib compression.
- *
- * @param CompressedData Pointer to the compressed data.
- * @param CompressedSize Size of the compressed data.
- * @param DecompressedData Pointer to the buffer for decompressed data.
- * @param DecompressedSize Size of the buffer for decompressed data.
- * @return The size of the decompressed data if successful, or -1 on failure.
- */
-
+// Function to decompress using zlib
 int32_t zlib_decompress(uint8_t *CompressedData, uint32_t CompressedSize, uint8_t *DecompressedData, uint32_t DecompressedSize) {
 	z_stream strm;
 	strm.zalloc = Z_NULL;
@@ -109,8 +96,10 @@ int32_t zlib_decompress(uint8_t *CompressedData, uint32_t CompressedSize, uint8_
 	return DecompressedSize - strm.avail_out;
 }
 
+// Global variable to track current index offset during reading
 uint64_t current_index_offset = 0;
 
+// Function to read data from the index
 void read_data(void *destination, const uint8_t *source, size_t length) {
 	memcpy(destination, source + current_index_offset, length);
 	current_index_offset += length;
@@ -121,13 +110,8 @@ int main(int argc, const char *argv[]) {
     double cpu_time_used;
     start = clock();
 	PakInfo info;
-	CompressionBlock Block[1024];
+	CompressionBlock Block[100];
 	
-	/**
-	 * Opens an input Pak file for reading.
-	 *
-	 * @param argv1 Path to the Pak file to be opened.
-	*/
 	int PakFile = open(argv[1], O_RDONLY);
 	
 	if (PakFile == -1) {
@@ -145,8 +129,8 @@ int main(int argc, const char *argv[]) {
 		return 1;
 	}
 	
-	// Deobfuscation the pak offset
 	info.offset = info.offset ^ OFFSET_KEY;
+	// info.size = info.size ^ SIZE_KEY; we don't have index size deobfuscation key
 	
 	uint32_t IndexSize = lseek(PakFile, -info.offset, SEEK_END);
 	
@@ -169,6 +153,7 @@ int main(int argc, const char *argv[]) {
 		return 4;
 	}
 	
+	// Decrypt pak index data
 	DecryptData(IndexData, IndexSize);
 	
 	uint32_t MountPointLength;
@@ -247,20 +232,41 @@ int main(int argc, const char *argv[]) {
 					DecryptData(CompressedData, Block[x].CompressedEnd - Block[x].CompressedStart);
 				}
 				
-				int32_t result = zlib_decompress(CompressedData, Block[x].CompressedEnd - Block[x].CompressedStart, DecompressedData, FileSize);
+				int32_t result = zlib_decompress(CompressedData, Block[x].CompressedEnd - Block[x].CompressedStart, DecompressedData, CHUNK_SIZE);
 				
 				if (result == -1) {
 					printf("Failed to decompress zlib block\n");
 					continue;
 				}
+				
 				if (write(OutFile, DecompressedData, result) != result) {
 					printf("Failed to write data into %s\n", Filename);
 					continue;
 				}
+				
 				printf("%016lx %u\t%s\n", Block[x].CompressedStart, result, Filename);
 			}
-		} else if (CompressionMethod == 0) {
+		}  else if (CompressionMethod == 0) { // No compression
 			lseek(PakFile, FileOffset, SEEK_SET);
+			
+			// for each file data beginning with this information
+			uint8_t hash[20];
+			uint64_t offset;
+			uint64_t fsize;
+			uint32_t comtype;
+			uint64_t zsize;
+			uint8_t dummy[21];
+			uint32_t comblocksize;
+			uint8_t encrypt;
+			
+			read(PakFile, hash, 20);
+			read(PakFile, &offset, 8);
+			read(PakFile, &fsize, 8);
+			read(PakFile, &comtype, 4);
+			read(PakFile, &zsize, 8);
+			read(PakFile, dummy, 21);
+			read(PakFile, &comblocksize, 4);
+			read(PakFile, &encrypt, 1);
 			
 			uint64_t remaining = FileSize;
 			ssize_t bytesRead, bytesWritten;
@@ -285,16 +291,18 @@ int main(int argc, const char *argv[]) {
 				}
 				remaining -= bytesRead;
 				printf("%016lx %zd\t%s\n", FileOffset, bytesWritten, Filename);
+				
 			}
 		} else {
 			printf("Zlib decompression support only\n");
 		}
+		
 		close(OutFile);
 	}
 	
 	close(PakFile);
 	end = clock();
     cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
-	printf("%u files found in %f seconds\n", NumOfEntry, cpu_time_used);
+	printf("\n%u files found in %f seconds\n", NumOfEntry, cpu_time_used);
 	return 0;
 }
