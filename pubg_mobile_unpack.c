@@ -301,7 +301,8 @@ int main(int argc, const char *argv[]) {
 		
 		close(OutFile);
 	}
-	
+
+	free(IndexData);
 	close(PakFile);
 	end = clock();
     cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
