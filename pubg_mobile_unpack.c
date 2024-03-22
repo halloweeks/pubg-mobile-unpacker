@@ -247,9 +247,9 @@ int main(int argc, const char *argv[]) {
 				printf("%016lx %u\t%s\n", Block[x].CompressedStart, result, Filename);
 			}
 		}  else if (CompressionMethod == 0) { // No compression
-			lseek(PakFile, FileOffset, SEEK_SET);
+			lseek(PakFile, FileOffset + 74, SEEK_SET);
 			
-			// for each file data beginning with this information
+			/* for each file data beginning with this information
 			uint8_t hash[20];
 			uint64_t offset;
 			uint64_t fsize;
@@ -267,7 +267,9 @@ int main(int argc, const char *argv[]) {
 			read(PakFile, dummy, 21);
 			read(PakFile, &comblocksize, 4);
 			read(PakFile, &encrypt, 1);
-			
+			*/
+
+
 			uint64_t remaining = FileSize;
 			ssize_t bytesRead, bytesWritten;
 			
@@ -290,7 +292,7 @@ int main(int argc, const char *argv[]) {
 					printf("Error writing to output file\n");
 				}
 				remaining -= bytesRead;
-				printf("%016lx %zd\t%s\n", FileOffset, bytesWritten, Filename);
+				printf("%016lx %zd\t%s\n", FileOffset + 74, bytesWritten, Filename);
 				
 			}
 		} else {
