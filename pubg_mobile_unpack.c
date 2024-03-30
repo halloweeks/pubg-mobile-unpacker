@@ -8,7 +8,6 @@
  *  GitHub: https://github.com/halloweeks/pubg-mobile-pak-extract
 */
 
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -19,16 +18,15 @@
 #include <string.h>
 #include <time.h>
 #include <zlib.h>
-#include <stdbool.h>
 
 // The key use for deobfuscation of index offset
 #define OFFSET_KEY 0xA6D17AB4D4783A41
-
 
 #define CHUNK_SIZE 65536
 
 // Pak Header
 typedef struct {
+	uint8_t encrypted;
 	uint32_t magic;
 	uint32_t version;
 	uint8_t hash[20];
@@ -93,6 +91,7 @@ int32_t zlib_decompress(uint8_t *CompressedData, uint32_t CompressedSize, uint8_
 		fprintf(stderr, "Failed to decompress data.\n");
 		return -1;
 	}
+	
 	return DecompressedSize - strm.avail_out;
 }
 
@@ -119,19 +118,20 @@ int main(int argc, const char *argv[]) {
 		return 1;
 	}
 	
-	if (lseek(PakFile, -44, SEEK_END) == -1) {
+	if (lseek(PakFile, -45, SEEK_END) == -1) {
 		printf("failed to seek file position\n");
 		return 1;
 	}
 	
-	if (read(PakFile, &info, 44) != 44) {
+	if (read(PakFile, &info, 45) != 45) {
 		printf("Failed to read pak header at -44\n");
 		return 1;
+
 	}
 	
 	info.offset = info.offset ^ OFFSET_KEY;
 	// info.size = info.size ^ SIZE_KEY; we don't have index size deobfuscation key
-	
+
 	uint32_t IndexSize = lseek(PakFile, -info.offset, SEEK_END);
 	
 	uint8_t *IndexData = (uint8_t*)malloc(IndexSize);
@@ -165,22 +165,25 @@ int main(int argc, const char *argv[]) {
 	uint64_t FileOffset = 0;
 	uint64_t FileSize = 0;
 	int CompressionMethod = 0;
-	uint64_t Zsize = 0;
-	char Dummy[21];
-	int NumOfBlocks;
+	uint64_t CompressedLength = 0;
+	size_t DecompressLength = 0;
+	uint8_t Dummy[21];
+	int NumOfBlocks = 0;
+	uint64_t CompressedStart = 0;
+	uint64_t CompressedEnd = 0;
 	uint8_t Encrypted;
 	uint32_t CompressedBlockSize = 0;
 	
-	read_data(&MountPointLength, IndexData, 4);
-	read_data(MountPoint, IndexData, MountPointLength);
+	// hold compressed and uncompressed data
+	uint8_t CompressedData[CHUNK_SIZE];
+	uint8_t DecompressedData[CHUNK_SIZE];
 	
 	printf("offset\t\tfilesize\t\tfilename\n");
 	printf("--------------------------------------\n");
 	
+	read_data(&MountPointLength, IndexData, 4);
+	read_data(MountPoint, IndexData, MountPointLength);
 	read_data(&NumOfEntry, IndexData, 4);
-	
-	uint8_t CompressedData[CHUNK_SIZE];
-	uint8_t DecompressedData[CHUNK_SIZE];
 	
 	for (uint32_t Files = 0; Files < NumOfEntry; Files++) {
 		read_data(&FilenameSize, IndexData, 4);
@@ -197,7 +200,7 @@ int main(int argc, const char *argv[]) {
 		read_data(&FileOffset, IndexData, 8);
 		read_data(&FileSize, IndexData, 8);
 		read_data(&CompressionMethod, IndexData, 4);
-		read_data(&Zsize, IndexData, 8);
+		read_data(&CompressedLength, IndexData, 8);
 		read_data(Dummy, IndexData, 21);
 		
 		if (CompressionMethod != 0) {
@@ -206,102 +209,72 @@ int main(int argc, const char *argv[]) {
 				read_data(&Block[x].CompressedStart, IndexData, 8);
 				read_data(&Block[x].CompressedEnd, IndexData, 8);
 			}
+		} else {
+			NumOfBlocks = 0;
 		}
 		
 		read_data(&CompressedBlockSize, IndexData, 4);
 		read_data(&Encrypted, IndexData, 1);
 		
+		// Open output file
 		int OutFile = create_file(Filename);
 		
+		// if opening output file failed
 		if (OutFile == -1) {
-			printf("Failed to open output file: %s\n", Filename);
-			continue;
+			fprintf(stderr, "Failed to open output file: %s\n", Filename);
+			continue; // continue for ignore this file extract next
 		}
 		
-		if (CompressionMethod == 1) {
-			for (uint32_t x = 0; x < NumOfBlocks; x++) {
-				if (lseek(PakFile, Block[x].CompressedStart, SEEK_SET) == -1) {
-					printf("Failed to seek \n");
-					continue;
-				}
-				if (read(PakFile, CompressedData, Block[x].CompressedEnd - Block[x].CompressedStart) != Block[x].CompressedEnd - Block[x].CompressedStart) {
-					printf("Unable to read compressed block data\n");
-					continue;
-				}
-				if (Encrypted == true) {
+		// Data is compressed
+		if (NumOfBlocks > 0) {
+			for (int x = 0; x < NumOfBlocks; x++) {
+				lseek(PakFile, Block[x].CompressedStart, SEEK_SET);
+				read(PakFile, CompressedData, Block[x].CompressedEnd - Block[x].CompressedStart);
+				
+				if (Encrypted) {
 					DecryptData(CompressedData, Block[x].CompressedEnd - Block[x].CompressedStart);
 				}
 				
-				int32_t result = zlib_decompress(CompressedData, Block[x].CompressedEnd - Block[x].CompressedStart, DecompressedData, CHUNK_SIZE);
-				
-				if (result == -1) {
-					printf("Failed to decompress zlib block\n");
-					continue;
+				// zlib compression
+				if (CompressionMethod == 1) {
+					DecompressLength = zlib_decompress(CompressedData, Block[x].CompressedEnd - Block[x].CompressedStart, DecompressedData, CHUNK_SIZE);
+					
+					if (DecompressLength == -1) {
+						fprintf(stderr, "Zlib decompression failed\n");
+						continue;
+					}
 				}
 				
-				if (write(OutFile, DecompressedData, result) != result) {
-					printf("Failed to write data into %s\n", Filename);
-					continue;
-				}
-				
-				printf("%016lx %u\t%s\n", Block[x].CompressedStart, result, Filename);
+				write(OutFile, DecompressedData, DecompressLength);
+				printf("%016lx %lu\t%s\n", Block[x].CompressedStart, DecompressLength, Filename);
 			}
-		}  else if (CompressionMethod == 0) { // No compression
+		} else {
+			// Uncompressed data
 			lseek(PakFile, FileOffset + 74, SEEK_SET);
-			
-			/* for each file data beginning with this information
-			uint8_t hash[20];
-			uint64_t offset;
-			uint64_t fsize;
-			uint32_t comtype;
-			uint64_t zsize;
-			uint8_t dummy[21];
-			uint32_t comblocksize;
-			uint8_t encrypt;
-			
-			read(PakFile, hash, 20);
-			read(PakFile, &offset, 8);
-			read(PakFile, &fsize, 8);
-			read(PakFile, &comtype, 4);
-			read(PakFile, &zsize, 8);
-			read(PakFile, dummy, 21);
-			read(PakFile, &comblocksize, 4);
-			read(PakFile, &encrypt, 1);
-			*/
-
-
 			uint64_t remaining = FileSize;
 			ssize_t bytesRead, bytesWritten;
 			
 			while (remaining > 0) {
 				size_t bytesToRead = remaining < CHUNK_SIZE ? remaining : CHUNK_SIZE;
-				
 				bytesRead = read(PakFile, DecompressedData, bytesToRead);
-				
 				if (bytesRead < 0) {
 					printf("Error reading from file\n");
 				}
-				
-				if (Encrypted == true) {
+				if (Encrypted) {
 					DecryptData(DecompressedData, bytesToRead);
 				}
-				
 				bytesWritten = write(OutFile, DecompressedData, bytesRead);
-				
 				if (bytesWritten != bytesRead) {
 					printf("Error writing to output file\n");
 				}
 				remaining -= bytesRead;
 				printf("%016lx %zd\t%s\n", FileOffset + 74, bytesWritten, Filename);
-				
 			}
-		} else {
-			printf("Zlib decompression support only\n");
 		}
 		
 		close(OutFile);
 	}
-
+	
 	free(IndexData);
 	close(PakFile);
 	end = clock();
