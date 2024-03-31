@@ -152,9 +152,11 @@ int main(int argc, const char *argv[]) {
 		printf("Unable to load index data\n");
 		return 4;
 	}
-	
-	// Decrypt pak index data
-	DecryptData(IndexData, IndexSize);
+
+	// Decrypt index table if necessary
+	if (info.encrypted ^ 0x01) {
+		DecryptData(IndexData, IndexSize);
+	}
 	
 	uint32_t MountPointLength;
 	char MountPoint[1024];
