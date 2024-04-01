@@ -130,7 +130,7 @@ int main(int argc, const char *argv[]) {
 	}
 	
 	info.offset = info.offset ^ OFFSET_KEY;
-	// info.size = info.size ^ SIZE_KEY; we don't have index size deobfuscation key
+	// info.size = info.size ^ SIZE_KEY;
 
 	uint32_t IndexSize = lseek(PakFile, -info.offset, SEEK_END);
 	
@@ -144,8 +144,8 @@ int main(int argc, const char *argv[]) {
 	
 	if (lseek(PakFile, info.offset, SEEK_SET) == -1) {
 		perror("Error seeking in file.");
-        close(PakFile);
-        return 1;
+                close(PakFile);
+                return 1;
 	}
 	
 	if (read(PakFile, IndexData, IndexSize) != IndexSize) {
@@ -153,7 +153,7 @@ int main(int argc, const char *argv[]) {
 		return 4;
 	}
 
-	// Decrypt index table if necessary
+	// Decrypt if necessary
 	if (info.encrypted ^ 0x01) {
 		DecryptData(IndexData, IndexSize);
 	}
