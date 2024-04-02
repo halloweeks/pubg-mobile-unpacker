@@ -21,6 +21,7 @@
 
 // The key use for deobfuscation of index offset
 #define OFFSET_KEY 0xA6D17AB4D4783A41
+#define SIZE_KEY 0x1FFBEE0AB84D0C43
 
 #define CHUNK_SIZE 65536
 
@@ -130,7 +131,7 @@ int main(int argc, const char *argv[]) {
 	}
 	
 	info.offset = info.offset ^ OFFSET_KEY;
-	// info.size = info.size ^ SIZE_KEY;
+	info.size = info.size ^ SIZE_KEY;
 
 	uint32_t IndexSize = lseek(PakFile, -info.offset, SEEK_END);
 	
@@ -193,9 +194,9 @@ int main(int argc, const char *argv[]) {
 			read_data(Filename, IndexData, FilenameSize);
 		} else {
 			// Unicode or filename contains special characters maybe encounter with bug
-			FilenameSize = -FilenameSize;
-			read_data(Filename, IndexData, FilenameSize * 2);
-			Filename[FilenameSize * 2] = '\0';
+			// FilenameSize = -FilenameSize;
+			read_data(Filename, IndexData, -FilenameSize * 2);
+			Filename[-FilenameSize * 2] = '\0';
 		}
 		
 		read_data(FileHash, IndexData, 20);
@@ -217,6 +218,10 @@ int main(int argc, const char *argv[]) {
 		
 		read_data(&CompressedBlockSize, IndexData, 4);
 		read_data(&Encrypted, IndexData, 1);
+
+		if (FilenameSize < 0 || FilenameSize > 1024) {
+			continue;
+		}
 		
 		// Open output file
 		int OutFile = create_file(Filename);
@@ -253,11 +258,11 @@ int main(int argc, const char *argv[]) {
 		} else {
 			// Uncompressed data
 			lseek(PakFile, FileOffset + 74, SEEK_SET);
-			uint64_t remaining = FileSize;
+			// uint64_t remaining = FileSize;
 			ssize_t bytesRead, bytesWritten;
 			
-			while (remaining > 0) {
-				size_t bytesToRead = remaining < CHUNK_SIZE ? remaining : CHUNK_SIZE;
+			while (FileSize > 0) {
+				size_t bytesToRead = FileSize < CHUNK_SIZE ? FileSize : CHUNK_SIZE;
 				bytesRead = read(PakFile, DecompressedData, bytesToRead);
 				if (bytesRead < 0) {
 					printf("Error reading from file\n");
@@ -269,7 +274,7 @@ int main(int argc, const char *argv[]) {
 				if (bytesWritten != bytesRead) {
 					printf("Error writing to output file\n");
 				}
-				remaining -= bytesRead;
+				FileSize -= bytesRead;
 				printf("%016lx %zd\t%s\n", FileOffset + 74, bytesWritten, Filename);
 			}
 		}
