@@ -18,7 +18,6 @@
 #include <string.h>
 #include <time.h>
 #include <zlib.h>
-// #include "AES.h"
 
 // The key use for deobfuscation of index offset
 #define OFFSET_KEY 0xA6D17AB4D4783A41
@@ -48,20 +47,6 @@ void DecryptData(uint8_t *data, uint32_t size) {
 		data[index] ^= 0x79;
 	}
 }
-
-/*
-// DecryptData with aes algorithm
-void DecryptData(uint8_t *data, uint32_t size, const uint8_t *key) {
-	AES_CTX ctx;
-	AES_DecryptInit(&ctx, key);
-	
-	for (uint32_t offset = 0; offset < size; offset += AES_BLOCK_SIZE) {
-		AES_Decrypt(&ctx, data + offset, data + offset);
-	}
-	
-	AES_CTX_Free(&ctx);
-}
-*/
 
 // Function to create a file
 int create_file(const char *fullPath) {
@@ -126,6 +111,16 @@ int main(int argc, const char *argv[]) {
         start = clock();
 	PakInfo info;
 	CompressionBlock Block[100];
+
+	if (argc != 2) {
+		fprintf(stderr, "Usage %s <pak_file>\n", argv[0]);
+		return 1;
+	}
+
+	if (access(argv[1], F_OK) == -1) {
+		fprintf(stderr, "Input %s file does not exist.\n", argv[1]);
+		return 1;
+	}
 	
 	int PakFile = open(argv[1], O_RDONLY);
 	
