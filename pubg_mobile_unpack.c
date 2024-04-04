@@ -150,6 +150,13 @@ int main(int argc, const char *argv[]) {
 	info.size = info.size ^ SIZE_KEY;
 
 	uint32_t IndexSize = lseek(PakFile, -info.offset, SEEK_END);
+
+	// check if index data less than 0 or greater than 10MB
+	if (IndexSize < 0 || IndexSize > 10485760) {
+		fprintf(stderr, "Index data size is not compatible.\n");
+		close(PakFile);
+		return 0;
+	}
 	
 	uint8_t *IndexData = (uint8_t*)malloc(IndexSize);
 	
