@@ -144,6 +144,12 @@ int main(int argc, const char *argv[]) {
 		return 1;
 
 	}
+
+	if (info.version > 6) {
+		printf("This pak version unsupported!\n");
+		close(PakFile);
+        	return 1;
+	}
 	
 	info.offset = info.offset ^ OFFSET_KEY;
 	info.size = info.size ^ SIZE_KEY;
