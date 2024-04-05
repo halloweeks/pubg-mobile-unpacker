@@ -39,7 +39,7 @@ cc pubg_mobile_unpack.c -o pubg_mobile_unpack.exe -lz -O2
 
 ```
 Format Specifications
-// Unreal Engine 4 PUBGM PAK file format
+Unreal Engine 4 PUBGM PAK file format
 
 FILE DATA
   for each file
