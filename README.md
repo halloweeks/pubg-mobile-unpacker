@@ -47,7 +47,7 @@ FILE DATA
     uint64 {8}       - File Offset
     uint64 {8}       - File Size
     uint32 {4}       - Compression Type (0=uncompressed, 1=ZLib)
-    uint64 {8}       - Compressed Length (not including the file header fields or padding)
+    uint64 {8}       - Compressed Length
     uint8 {21}       - Dummy byte
 
     if (compressed) {
@@ -59,12 +59,11 @@ FILE DATA
     
     uint32 {4}       - Compressed Block Size
     uint8 {1}        - Is Encrypted
-    byte {X}         - File Data (Zlib Compression)
+    byte {X}         - File Data
     
-DIRECTORY
+INDEX DATA
   uint32 {4}       - Relative Directory Name Length (including null terminator) (10)
-  byte {9}         - Relative Directory Name (../../../)
-  byte {1}         - null Relative Directory Name Terminator
+  byte {X}         - Relative Directory Name (../../../)
   uint32 {4}       - Number of Files
   for each file
     uint32 {4}       - Filename Length (including null terminator)
@@ -73,7 +72,7 @@ DIRECTORY
     uint64 {8}       - File Offset
     uint64 {8}       - File size
     uint32 {4}       - Compression Type (0=uncompressed, 1=Zlib)
-    uint64 {8}       - Compressed Length (not including the file header fields or padding)
+    uint64 {8}       - Compressed Length 
     uint8 {21}       - Dummy byte
     
     if (compressed) {
@@ -86,12 +85,13 @@ DIRECTORY
     uint32 {4}       - Compressed Block Size
     uint8 {1}        - Is Encrypted
 
-FOOTER (44 bytes)
+FOOTER (45 bytes)
+  uint8  {1}       - IsEncrypted
   uint32 {4}       - Signature
   uint32 {4}       - Version
-  byte {20}        - directory sha1 hash
-  uint64 {8}       - Directory Length (not including FOOTER)
-  uint64 {8}       - Directory Offset
+  byte {20}        - Index data sha1 hash
+  uint64 {8}       - Index data length
+  uint64 {8}       - Index data offset
   
 ```
 
