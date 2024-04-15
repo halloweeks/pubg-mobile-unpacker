@@ -281,22 +281,28 @@ int main(int argc, const char *argv[]) {
 		} else {
 			// Uncompressed data
 			lseek(PakFile, FileOffset + 74, SEEK_SET);
-			// uint64_t remaining = FileSize;
+			
 			ssize_t bytesRead, bytesWritten;
 			
 			while (FileSize > 0) {
 				size_t bytesToRead = FileSize < CHUNK_SIZE ? FileSize : CHUNK_SIZE;
+				
 				bytesRead = read(PakFile, DecompressedData, bytesToRead);
+				
 				if (bytesRead < 0) {
 					printf("Error reading from file\n");
 				}
+				
 				if (Encrypted) {
 					DecryptData(DecompressedData, bytesToRead);
 				}
+				
 				bytesWritten = write(OutFile, DecompressedData, bytesRead);
+				
 				if (bytesWritten != bytesRead) {
 					printf("Error writing to output file\n");
 				}
+				
 				FileSize -= bytesRead;
 				printf("%016lx %zd\t%s\n", FileOffset + 74, bytesWritten, Filename);
 			}
