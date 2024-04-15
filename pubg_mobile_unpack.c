@@ -5,7 +5,7 @@
  *  The program not support pubg mobile 1.1.0 and above version 
  *  pak extraction because pubg mobile developer using actual
  *  encryption for encrypting pak index data it make unable to read data without decryption key
- *  GitHub: https://github.com/halloweeks/pubg-mobile-pak-extract
+ *  GitHub: https://github.com/halloweeks/pubg-mobile-unpacker
 */
 
 #include <stdio.h>
