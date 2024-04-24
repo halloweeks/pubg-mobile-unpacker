@@ -18,6 +18,7 @@
 #include <string.h>
 #include <time.h>
 #include <zlib.h>
+#include <zstd.h>
 
 // The key use for deobfuscation of index offset
 #define OFFSET_KEY 0xA6D17AB4D4783A41
@@ -267,12 +268,20 @@ int main(int argc, const char *argv[]) {
 				
 				// zlib compression
 				if (CompressionMethod == 1) {
-					DecompressLength = zlib_decompress(CompressedData, Block[x].CompressedEnd - Block[x].CompressedStart, DecompressedData, CHUNK_SIZE);
-					
-					if (DecompressLength == -1) {
+					if ((DecompressLength = zlib_decompress(CompressedData, Block[x].CompressedEnd - Block[x].CompressedStart, DecompressedData, CHUNK_SIZE)) == -1) {
 						fprintf(stderr, "Zlib decompression failed\n");
 						continue;
 					}
+				} else if (CompressionMethod == 6) {
+					DecompressLength = ZSTD_decompress(DecompressedData, CHUNK_SIZE, CompressedData, Block[x].CompressedEnd - Block[x].CompressedStart);
+					
+					if (ZSTD_isError(DecompressLength)) {
+						fprintf(stderr, "Decompression failed: %s\n", ZSTD_getErrorName(DecompressLength));
+						continue;
+					}
+				} else {
+					printf("Unknown compression method %u\n", CompressionMethod);
+					close(OutFile);
 				}
 				
 				write(OutFile, DecompressedData, DecompressLength);
