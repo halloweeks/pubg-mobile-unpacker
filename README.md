@@ -46,7 +46,7 @@ FILE DATA
     uint8 {20}       - File Hash
     uint64 {8}       - File Offset
     uint64 {8}       - File Size
-    uint32 {4}       - Compression Type (0=uncompressed, 1=ZLib)
+    uint32 {4}       - Compression Method (0=uncompressed, 1=zLib, 6=zstd)
     uint64 {8}       - Compressed Length
     uint8 {21}       - Dummy byte
 
@@ -71,7 +71,7 @@ INDEX DATA
     uint8 {20}       - File Hash
     uint64 {8}       - File Offset
     uint64 {8}       - File size
-    uint32 {4}       - Compression Type (0=uncompressed, 1=Zlib)
+    uint32 {4}       - Compression Method (0=uncompressed, 1=zlib, 6=zstd)
     uint64 {8}       - Compressed Length 
     uint8 {21}       - Dummy byte
     
