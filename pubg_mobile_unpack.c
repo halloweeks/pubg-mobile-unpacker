@@ -152,8 +152,8 @@ int main(int argc, const char *argv[]) {
 
 	off_t IndexSize = lseek(PakFile, -info.offset, SEEK_END);
 
-	// check if index data less than 0 or greater than 10MB
-	if (IndexSize < 0 || IndexSize > 10485760) {
+	// check if index data size is less than 0B or greater than 50MB
+	if (IndexSize < 0 || IndexSize > 52428800) {
 		fprintf(stderr, "Index data size is not compatible.\n");
 		close(PakFile);
 		return 0;
