@@ -111,7 +111,7 @@ int main(int argc, const char *argv[]) {
         double cpu_time_used;
         start = clock();
 	PakInfo info;
-	CompressionBlock Block[100];
+	CompressionBlock Block[500];
 
 	if (argc != 2) {
 		fprintf(stderr, "Usage %s <pak_file>\n", argv[0]);
@@ -150,7 +150,7 @@ int main(int argc, const char *argv[]) {
 	info.offset = info.offset ^ OFFSET_KEY;
 	info.size = info.size ^ SIZE_KEY;
 
-	uint32_t IndexSize = lseek(PakFile, -info.offset, SEEK_END);
+	off_t IndexSize = lseek(PakFile, -info.offset, SEEK_END);
 
 	// check if index data less than 0 or greater than 10MB
 	if (IndexSize < 0 || IndexSize > 10485760) {
