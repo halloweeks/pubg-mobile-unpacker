@@ -229,14 +229,17 @@ int main(int argc, const char *argv[]) {
 		read_data(&CompressionMethod, IndexData, 4);
 		read_data(&CompressedLength, IndexData, 8);
 		read_data(Dummy, IndexData, 21);
-		
+
+		// Check if CompressionMethod is not equal to 0 (none)
 		if (CompressionMethod != 0) {
+			// Read the number of blocks and their compressed start and end positions
 			read_data(&NumOfBlocks, IndexData, 4);
 			for (int x = 0; x < NumOfBlocks; x++) {
 				read_data(&Block[x].CompressedStart, IndexData, 8);
 				read_data(&Block[x].CompressedEnd, IndexData, 8);
 			}
 		} else {
+			// Set the number of blocks to 0 if CompressionMethod indicates no compression
 			NumOfBlocks = 0;
 		}
 		
