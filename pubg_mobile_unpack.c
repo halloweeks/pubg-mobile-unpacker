@@ -20,7 +20,7 @@
 #include <zlib.h>
 #include <zstd.h>
 
-// The key use for deobfuscation of index offset
+// The key use for deobfuscation
 #define OFFSET_KEY 0xA6D17AB4D4783A41
 #define SIZE_KEY 0x1FFBEE0AB84D0C43
 
