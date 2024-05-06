@@ -86,12 +86,12 @@ INDEX DATA
     uint8 {1}        - Is Encrypted
 
 FOOTER (45 bytes)
-  uint8  {1}       - IsEncrypted
-  uint32 {4}       - Signature
-  uint32 {4}       - Version
-  byte {20}        - Index data sha1 hash
-  uint64 {8}       - Index data length
-  uint64 {8}       - Index data offset
+  uint8  {1}       - IsEncrypted (obfuscated)
+  uint32 {4}       - Signature (obfuscated)
+  uint32 {4}       - Version (normal)
+  byte {20}        - IndexData sha1 hash (obfuscated)
+  uint64 {8}       - IndexData length (obfuscated)
+  uint64 {8}       - IndexData offset (obfuscated)
   
 ```
 
