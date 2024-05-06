@@ -196,8 +196,6 @@ int main(int argc, const char *argv[]) {
 	size_t DecompressLength = 0;
 	uint8_t Dummy[21];
 	int NumOfBlocks = 0;
-	uint64_t CompressedStart = 0;
-	uint64_t CompressedEnd = 0;
 	uint8_t Encrypted;
 	uint32_t CompressedBlockSize = 0;
 	
