@@ -146,9 +146,11 @@ int main(int argc, const char *argv[]) {
 		close(PakFile);
         	return 1;
 	}
-	
-	info.offset = info.offset ^ OFFSET_KEY;
-	info.size = info.size ^ SIZE_KEY;
+
+	// deobfuscation
+	info.offset ^= OFFSET_KEY;
+	info.size ^= SIZE_KEY;
+	info.encrypted ^= 0x01;
 
 	off_t IndexSize = lseek(PakFile, -info.offset, SEEK_END);
 
@@ -179,7 +181,7 @@ int main(int argc, const char *argv[]) {
 	}
 
 	// Decrypt if necessary
-	if (info.encrypted ^ 0x01) {
+	if (info.encrypted) {
 		DecryptData(IndexData, IndexSize);
 	}
 	
