@@ -254,8 +254,10 @@ int main(int argc, const char *argv[]) {
 		// Data is compressed
 		if (NumOfBlocks > 0) {
 			for (int x = 0; x < NumOfBlocks; x++) {
-				lseek(PakFile, Block[x].CompressedStart, SEEK_SET);
-				read(PakFile, CompressedData, Block[x].CompressedEnd - Block[x].CompressedStart);
+				if (pread(PakFile, CompressedData, Block[x].CompressedEnd - Block[x].CompressedStart, Block[x].CompressedStart) != Block[x].CompressedEnd - Block[x].CompressedStart) {
+					fprintf(stderr, "Failed to read compressed chunk at %lx\n", Block[x].CompressedStart);
+					continue;
+				}
 				
 				if (Encrypted) {
 					DecryptData(CompressedData, Block[x].CompressedEnd - Block[x].CompressedStart);
