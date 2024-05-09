@@ -151,17 +151,15 @@ int main(int argc, const char *argv[]) {
 	info.offset ^= OFFSET_KEY;
 	info.size ^= SIZE_KEY;
 	info.encrypted ^= 0x01;
-
-	off_t IndexSize = lseek(PakFile, -info.offset, SEEK_END);
-
+	
 	// check if index data size is less than 0B or greater than 50MB
-	if (IndexSize < 0 || IndexSize > 52428800) {
+	if (info.size < 0 || info.size > 52428800) {
 		fprintf(stderr, "Index data size is not compatible.\n");
 		close(PakFile);
 		return 0;
 	}
 	
-	uint8_t *IndexData = (uint8_t*)malloc(IndexSize);
+	uint8_t *IndexData = (uint8_t*)malloc(info.size);
 	
 	if (!IndexData) {
 		printf("Memory allocation failed.\n");
@@ -175,14 +173,14 @@ int main(int argc, const char *argv[]) {
                 return 1;
 	}
 	
-	if (read(PakFile, IndexData, IndexSize) != IndexSize) {
+	if (read(PakFile, IndexData, info.size) != info.size) {
 		printf("Unable to load index data\n");
 		return 4;
 	}
 
 	// Decrypt if necessary
 	if (info.encrypted) {
-		DecryptData(IndexData, IndexSize);
+		DecryptData(IndexData, info.size);
 	}
 	
 	uint32_t MountPointLength;
