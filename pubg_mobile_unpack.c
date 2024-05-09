@@ -152,11 +152,11 @@ int main(int argc, const char *argv[]) {
 	info.size ^= SIZE_KEY;
 	info.encrypted ^= 0x01;
 	
-	// check if index data size is less than 0B or greater than 50MB
-	if (info.size < 0 || info.size > 52428800) {
+	// check if index data size is greater than 50MB
+	if (info.size > 52428800) {
 		fprintf(stderr, "Index data size is not compatible.\n");
 		close(PakFile);
-		return 0;
+		return 1;
 	}
 	
 	uint8_t *IndexData = (uint8_t*)malloc(info.size);
@@ -164,18 +164,12 @@ int main(int argc, const char *argv[]) {
 	if (!IndexData) {
 		printf("Memory allocation failed.\n");
 		close(PakFile);
-		return 3;
+		return 1;
 	}
-	
-	if (lseek(PakFile, info.offset, SEEK_SET) == -1) {
-		perror("Error seeking in file.");
-                close(PakFile);
-                return 1;
-	}
-	
-	if (read(PakFile, IndexData, info.size) != info.size) {
-		printf("Unable to load index data\n");
-		return 4;
+
+	if (pread(PakFile, IndexData, info.size, info.offset) != info.size) {
+		fprintf(stderr, "Failed to load index data\n");
+		return 1;
 	}
 
 	// Decrypt if necessary
