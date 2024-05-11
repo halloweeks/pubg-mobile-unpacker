@@ -45,7 +45,7 @@ typedef struct {
 // Function to decrypt data
 void DecryptData(uint8_t *data, uint32_t size) {
 	for (uint32_t index = 0; index < size; index++) {
-		data[index] ^= 0x79;
+		data[index] ^= 0x79u;
 	}
 }
 
