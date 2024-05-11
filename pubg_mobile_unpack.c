@@ -134,7 +134,7 @@ int main(int argc, const char *argv[]) {
 	}
 	
 	if (read(PakFile, &info, 45) != 45) {
-		printf("Failed to read pak header at -44\n");
+		printf("Failed to read pak header at -45\n");
 		return 1;
 
 	}
