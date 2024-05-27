@@ -139,7 +139,7 @@ int main(int argc, const char *argv[]) {
 
 	}
 
-	if (info.version > 6) {
+	if (info.version > 7) {
 		printf("This pak version unsupported!\n");
 		close(PakFile);
         	return 1;
