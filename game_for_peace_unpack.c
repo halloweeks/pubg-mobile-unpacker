@@ -293,6 +293,7 @@ int main(int argc, const char *argv[]) {
 
 			if (FilenameSize < 0 || FilenameSize > 1024) {
 				fprintf(stderr, "Filename contains invalid characters!\n");
+				sleep(2);
 				continue;
 			}
 			
