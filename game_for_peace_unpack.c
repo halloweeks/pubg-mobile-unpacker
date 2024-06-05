@@ -281,8 +281,20 @@ int main(int argc, const char *argv[]) {
 		
 		for (int x = 0; x < DIR_FILES; x++) {
 			read_data(&FilenameSize, IndexData, 4);
-			read_data(Filename, IndexData, FilenameSize);
+
+			if (FilenameSize > 0) {
+				read_data(Filename, IndexData, FilenameSize);
+			} else {
+				read_data(Filename, IndexData, -FilenameSize * 2);
+				Filename[-FilenameSize * 2] = '\0';
+			}
+			
 			read_data(&ENTRY, IndexData, 4);
+
+			if (FilenameSize < 0 || FilenameSize > 1024) {
+				fprintf(stderr, "Filename contains invalid characters!\n");
+				continue;
+			}
 			
 			snprintf(path, 1024, "%s%s%s", MountPoint, DIR_NAME, Filename);
 			
