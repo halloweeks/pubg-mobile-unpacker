@@ -34,8 +34,8 @@ typedef struct {
 
 // Compression Blocks
 typedef struct {
-    uint64_t CompressedStart;
-    uint64_t CompressedEnd;
+    uint64_t start;
+    uint64_t end;
 } __attribute__((packed)) CompressionBlock;
 
 
@@ -101,7 +101,7 @@ int32_t zlib_decompress(uint8_t *CompressedData, uint32_t CompressedSize, uint8_
 	inflateEnd(&strm);
 	
 	if (ret != Z_STREAM_END) {
-		fprintf(stderr, "Failed to decompress data.\n");
+		fprintf(stderr, "Failed to decompress data: %s\n", zError(ret));
 		return -1;
 	}
 	
@@ -120,7 +120,8 @@ void read_data(void *destination, const uint8_t *source, size_t length) {
 void extract(int PakFile, Entry entry, char *filename);
 
 int main(int argc, const char *argv[]) {
-	clock_t start = clock();
+	clock_t t0 = clock();
+	
 	PakInfo info;
 	CompressionBlock Block[500];
 	
@@ -141,6 +142,9 @@ int main(int argc, const char *argv[]) {
 		return 1;
 	}
 	
+	off_t total = lseek(PakFile, 0, SEEK_END);
+	lseek(PakFile, 0, SEEK_SET);
+	
 	if (lseek(PakFile, -45, SEEK_END) == -1) {
 		printf("failed to seek file position\n");
 		return 1;
@@ -156,10 +160,9 @@ int main(int argc, const char *argv[]) {
 	if (info.version != 8) {
 		printf("This pak version unsupported!\n");
 		close(PakFile);
-        	return 1;
+        return 1;
 	}
 	*/
-	
 	
 	// deobfuscation
 	info.offset ^= OFFSET_KEY;
@@ -250,8 +253,8 @@ int main(int argc, const char *argv[]) {
 			}
 			
 			for (uint32_t i = 0; i < entry[Files].NumOfBlocks; i++) {
-				read_data(&entry[Files].blocks[i].CompressedStart, IndexData, 8);
-				read_data(&entry[Files].blocks[i].CompressedEnd, IndexData, 8);
+				read_data(&entry[Files].blocks[i].start, IndexData, 8);
+				read_data(&entry[Files].blocks[i].end, IndexData, 8);
 			}
 		} else {
 			entry[Files].NumOfBlocks = 0;
@@ -281,27 +284,13 @@ int main(int argc, const char *argv[]) {
 		
 		for (int x = 0; x < DIR_FILES; x++) {
 			read_data(&FilenameSize, IndexData, 4);
-
-			if (FilenameSize > 0) {
-				read_data(Filename, IndexData, FilenameSize);
-			} else {
-				read_data(Filename, IndexData, -FilenameSize * 2);
-				Filename[-FilenameSize * 2] = '\0';
-			}
-			
+			read_data(Filename, IndexData, FilenameSize);
 			read_data(&ENTRY, IndexData, 4);
-
-			if (FilenameSize < 0 || FilenameSize > 1024) {
-				fprintf(stderr, "Filename contains invalid characters!\n");
-				sleep(2);
-				continue;
-			}
 			
+			memset(path, 0, 1024);
 			snprintf(path, 1024, "%s%s%s", MountPoint, DIR_NAME, Filename);
 			
 			extract(PakFile, entry[ENTRY], path);
-			
-			memset(path, 0, 1024);
 		}
 	}
 	
@@ -314,48 +303,49 @@ int main(int argc, const char *argv[]) {
 	
 	free(IndexData);
 	close(PakFile);
-	clock_t end = clock();
-	double cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
-	printf("\n%u files found in %f seconds\n", NumOfEntry, cpu_time_used);
+	
+	clock_t t1 = clock();
+    double time = ((double)(t1 - t0)) / CLOCKS_PER_SEC;
+    const double MB = 1024.0 * 1024.0;
+    printf("Processed %.2f MB, speed = %.2f MB/s, %u files found in %f seconds\n", total / MB, total / MB / time, NumOfEntry, time);
 	return 0;
 }
 
+// hold compressed and uncompressed data
+uint8_t CompressedData[CHUNK_SIZE * 2];
+uint8_t DecompressedData[CHUNK_SIZE * 2];
+size_t DecompressLength = 0;
 
 void extract(int PakFile, Entry entry, char *filename) {
-	// hold compressed and uncompressed data
-	uint8_t CompressedData[CHUNK_SIZE];
-	uint8_t DecompressedData[CHUNK_SIZE];
-	size_t DecompressLength = 0;
-	
 	int OutFile = create_file(filename);
 	
 	if (OutFile == -1) {
-		fprintf(stderr, "Failed to open output file: %s\n", filename);
-		return;
+		printf("Failed to open output file: %s\n", filename);
+		exit(1);
 	}
 	
 	if (entry.NumOfBlocks > 0) {
 		for (int x = 0; x < entry.NumOfBlocks; x++) {
-			if (pread(PakFile, CompressedData, entry.blocks[x].CompressedEnd - entry.blocks[x].CompressedStart, entry.blocks[x].CompressedStart) != entry.blocks[x].CompressedEnd - entry.blocks[x].CompressedStart) {
-				fprintf(stderr, "Failed to read compressed chunk at %lx\n", entry.blocks[x].CompressedStart);
-				return;
+			if (pread(PakFile, CompressedData, entry.blocks[x].end - entry.blocks[x].start, entry.blocks[x].start) != entry.blocks[x].end - entry.blocks[x].start) {
+				printf("Failed to read compressed chunk at %lx\n", entry.blocks[x].start);
+				exit(1);
 			}
 			
 			if (entry.Encrypted) {
-				DecryptData(CompressedData, entry.blocks[x].CompressedEnd - entry.blocks[x].CompressedStart);
+				DecryptData(CompressedData, entry.blocks[x].end - entry.blocks[x].start);
 			}
 			
 			if (entry.CompressionMethod == 1) {
-				if ((DecompressLength = zlib_decompress(CompressedData, entry.blocks[x].CompressedEnd - entry.blocks[x].CompressedStart, DecompressedData, CHUNK_SIZE)) == -1) {
+				if ((DecompressLength = zlib_decompress(CompressedData, entry.blocks[x].end - entry.blocks[x].start, DecompressedData, CHUNK_SIZE)) == -1) {
 					fprintf(stderr, "ZLIB Decompression failed\n");
-					return;
+					exit(1);
 				}
 			} else if (entry.CompressionMethod == 6) {
-				DecompressLength = ZSTD_decompress(DecompressedData, CHUNK_SIZE, CompressedData, entry.blocks[x].CompressedEnd - entry.blocks[x].CompressedStart);
+				DecompressLength = ZSTD_decompress(DecompressedData, CHUNK_SIZE, CompressedData, entry.blocks[x].end - entry.blocks[x].start);
 				
 				if (ZSTD_isError(DecompressLength)) {
 					fprintf(stderr, "ZSTD Decompression failed: %s\n", ZSTD_getErrorName(DecompressLength));
-					return;
+					exit(1);
 				}
 			} else {
 				printf("Unknown compression method %u\n", entry.CompressionMethod);
@@ -363,9 +353,8 @@ void extract(int PakFile, Entry entry, char *filename) {
 			}
 			
 			write(OutFile, DecompressedData, DecompressLength);
-			printf("%016lx %lu\t%s\n", entry.blocks[x].CompressedStart, DecompressLength, filename);
+			printf("%016lx %lu\t%s\n", entry.blocks[x].start, DecompressLength, filename);
 		}
-		
 	} else {
 		lseek(PakFile, entry.FileOffset + 74, SEEK_SET);
 		
@@ -395,4 +384,5 @@ void extract(int PakFile, Entry entry, char *filename) {
 	}
 	
 	close(OutFile);
+	return;
 }
