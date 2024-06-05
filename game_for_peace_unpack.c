@@ -284,8 +284,22 @@ int main(int argc, const char *argv[]) {
 		
 		for (int x = 0; x < DIR_FILES; x++) {
 			read_data(&FilenameSize, IndexData, 4);
-			read_data(Filename, IndexData, FilenameSize);
+			
+			if (FilenameSize > 0) {
+				read_data(Filename, IndexData, FilenameSize);
+			} else {
+				// filename contains invalid characters!
+				read_data(Filename, IndexData, -FilenameSize * 2);
+				Filename[-FilenameSize * 2] = '\0';
+				// exit(1);
+			}
+			
 			read_data(&ENTRY, IndexData, 4);
+			
+			// ignore this file because filename contains invalid characters or unicode characters, maybe encounter with bug or generate wrong output
+			if (FilenameSize < 0) {
+				continue;
+			}
 			
 			memset(path, 0, 1024);
 			snprintf(path, 1024, "%s%s%s", MountPoint, DIR_NAME, Filename);
