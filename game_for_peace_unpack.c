@@ -221,8 +221,6 @@ int main(int argc, const char *argv[]) {
 	}
 	read_data(&NumOfEntry, IndexData, 4);
 	
-	uint64_t memory_use = 0;
-	
 	Entry *entry = (Entry*)malloc(NumOfEntry * sizeof(Entry));
 	
 	if (!entry) {
@@ -231,8 +229,6 @@ int main(int argc, const char *argv[]) {
 		close(PakFile);
 		return 1;
 	}
-	
-	memory_use += NumOfEntry * sizeof(Entry);
 	
 	for (uint32_t Files = 0; Files < NumOfEntry; Files++) {
 		read_data(entry[Files].FileHash, IndexData, 20);
@@ -253,8 +249,6 @@ int main(int argc, const char *argv[]) {
 				return 0;
 			}
 			
-			memory_use += entry[Files].NumOfBlocks * sizeof(CompressionBlock);
-			
 			for (uint32_t i = 0; i < entry[Files].NumOfBlocks; i++) {
 				read_data(&entry[Files].blocks[i].CompressedStart, IndexData, 8);
 				read_data(&entry[Files].blocks[i].CompressedEnd, IndexData, 8);
@@ -266,10 +260,6 @@ int main(int argc, const char *argv[]) {
 		read_data(&entry[Files].CompressedBlockSize, IndexData, 4);
 		read_data(&entry[Files].Encrypted, IndexData, 1);
 	}
-	
-	//printf("Total allocated memory: %lu bytes\n", memory_use);
-	
-	//printf("\n\n\n");
 	
 	uint64_t ENTRIES = 0;
 	uint64_t DIR_COUNT = 0;
