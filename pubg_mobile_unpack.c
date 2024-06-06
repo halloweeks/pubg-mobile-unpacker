@@ -20,6 +20,10 @@
 #include <zlib.h>
 #include <zstd.h>
 
+#include <iconv.h>
+#include <errno.h>
+
+
 // The key use for deobfuscation
 #define OFFSET_KEY 0xA6D17AB4D4783A41
 #define SIZE_KEY 0x1FFBEE0AB84D0C43
@@ -106,6 +110,32 @@ void read_data(void *destination, const uint8_t *source, size_t length) {
 	current_index_offset += length;
 }
 
+int unicode_to_utf8(const char *input, size_t input_len, char *output, size_t output_len) {
+	iconv_t conv = iconv_open("UTF-8", "UTF-16LE");
+	
+	if (conv == (iconv_t)-1) {
+		perror("iconv_open");
+		return -1;
+	}
+	
+	char *in_buf = (char *)input;
+	char *out_buf = output;
+	
+	size_t in_bytes_left = input_len;
+	size_t out_bytes_left = output_len;
+	
+	size_t result = iconv(conv, &in_buf, &in_bytes_left, &out_buf, &out_bytes_left);
+	
+	if (result == (size_t)-1) {
+		perror("iconv");
+		iconv_close(conv);
+		return -1;
+	}
+	
+	iconv_close(conv);
+	return 0;
+}
+
 int main(int argc, const char *argv[]) {
 	clock_t start = clock();
 	PakInfo info;
@@ -180,6 +210,7 @@ int main(int argc, const char *argv[]) {
 	int NumOfEntry;
 	int32_t FilenameSize;
 	char Filename[1024];
+	char fname[1024];
 	uint8_t FileHash[20];
 	uint64_t FileOffset = 0;
 	uint64_t FileSize = 0;
@@ -207,10 +238,9 @@ int main(int argc, const char *argv[]) {
 		if (FilenameSize > 0 && FilenameSize < 1024) {
 			read_data(Filename, IndexData, FilenameSize);
 		} else {
-			// Unicode or filename contains special characters maybe encounter with bug
-			// FilenameSize = -FilenameSize;
-			read_data(Filename, IndexData, -FilenameSize * 2);
-			Filename[-FilenameSize * 2] = '\0';
+			// UTF-16LE filename convert into UTF-8
+			read_data(fname, IndexData, -FilenameSize * 2);
+			unicode_to_utf8(fname, -FilenameSize * 2, Filename, sizeof(Filename));
 		}
 		
 		read_data(FileHash, IndexData, 20);
@@ -235,10 +265,6 @@ int main(int argc, const char *argv[]) {
 		
 		read_data(&CompressedBlockSize, IndexData, 4);
 		read_data(&Encrypted, IndexData, 1);
-
-		if (FilenameSize < 0 || FilenameSize > 1024) {
-			continue;
-		}
 		
 		// Open output file
 		int OutFile = create_file(Filename);
