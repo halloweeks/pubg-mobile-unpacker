@@ -31,9 +31,12 @@ Ensure compatibility with the version specified, and be aware of the limitations
 To build the executable, use the following command:
 
 ```bash
-cc pubg_mobile_unpack.c -o pubg_mobile_unpack.exe -lz -lzstd -O2
+cc pubg_mobile_unpack.c -o pubg_mobile_unpack.exe -lz -lzstd -liconv -O2
 ```
 
+```bash
+cc game_for_peace_unpack.c -o game_for_peace_unpack.exe -lz -lzstd -liconv -O2
+```
 
 **pubgm pak file structure:**
 
