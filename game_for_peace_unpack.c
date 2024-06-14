@@ -22,6 +22,7 @@
 
 // The key use for deobfuscation
 #define OFFSET_KEY 0xD74AF37FAA6B020D
+#define SIZE_KEY 0x8924B0E3298B7069
 
 #define CHUNK_SIZE 65536
 
