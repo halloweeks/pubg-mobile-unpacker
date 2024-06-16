@@ -37,7 +37,7 @@ cc pubg_mobile_unpack.c -o pubg_mobile_unpack.exe -lz -lzstd -liconv -O2
 for pubg mobile chinese (game for peace) version
 
 ```bash
-cc game_for_peace_unpack.c -o game_for_peace_unpack.exe -lz -lzstd -liconv -O2
+cc game_for_peace_unpack.c -o game_for_peace_unpack.exe -lz -O2
 ```
 
 **pubgm pak file structure:**
