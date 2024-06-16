@@ -324,7 +324,10 @@ int main(int argc, const char *argv[]) {
 			} else {
 				// filename is unicode
 				read_data(Filename, IndexData, -FilenameSize * 2);
-				unicode_to_utf8(Filename, -FilenameSize * 2, Filename, sizeof(Filename));
+				if (unicode_to_utf8(Filename, -FilenameSize * 2, Filename, sizeof(Filename)) == -1) {
+					printf("failed to convert UTF-16LE filename into UTF-8!\n");
+					exit(1);
+				}
 			}
 			
 			read_data(&ENTRY, IndexData, 4);
