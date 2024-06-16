@@ -15,9 +15,6 @@
 #include <string.h>
 #include <time.h>
 #include <zlib.h>
-#include <zstd.h>
-
-#include <iconv.h>
 #include <errno.h>
 
 // The key use for deobfuscation
@@ -123,30 +120,37 @@ void read_data(void *destination, const uint8_t *source, size_t length) {
 
 void extract(int PakFile, Entry entry, char *filename);
 
-int unicode_to_utf8(const char *input, size_t input_len, char *output, size_t output_len) {
-	iconv_t conv = iconv_open("UTF-8", "UTF-16LE");
+int unicode_to_utf8(const char *input, size_t input_len, char *out, size_t output_len) {
+	char output[output_len];
 	
-	if (conv == (iconv_t)-1) {
-		perror("iconv_open");
-		return -1;
-	}
-	
-	char *in_buf = (char *)input;
-	char *out_buf = output;
-	
-	size_t in_bytes_left = input_len;
-	size_t out_bytes_left = output_len;
-	
-	size_t result = iconv(conv, &in_buf, &in_bytes_left, &out_buf, &out_bytes_left);
-	
-	if (result == (size_t)-1) {
-		perror("iconv");
-		iconv_close(conv);
-		return -1;
-	}
-	
-	iconv_close(conv);
-	return 0;
+    size_t i = 0, j = 0;
+    
+    while (i < input_len && j < output_len) {
+        unsigned int unicode_char;
+        
+        // Read a UTF-16LE character
+        unicode_char = (unsigned char)input[i++];
+        unicode_char |= (unsigned char)input[i++] << 8;
+        
+        // Convert UTF-16LE to UTF-8
+        if (unicode_char <= 0x7F) {
+            output[j++] = (char)unicode_char;
+        } else if (unicode_char <= 0x7FF) {
+            if (j + 1 >= output_len) return -1; // Output buffer too small
+            output[j++] = 0xC0 | (unicode_char >> 6);
+            output[j++] = 0x80 | (unicode_char & 0x3F);
+        } else {
+            if (j + 2 >= output_len) return -1; // Output buffer too small
+            output[j++] = 0xE0 | (unicode_char >> 12);
+            output[j++] = 0x80 | ((unicode_char >> 6) & 0x3F);
+            output[j++] = 0x80 | (unicode_char & 0x3F);
+        }
+    }
+    
+    if (i < input_len) return -1; // Input buffer not fully consumed
+    
+    memcpy(out, output, j);
+    return 0;
 }
 
 int main(int argc, const char *argv[]) {
@@ -231,7 +235,6 @@ int main(int argc, const char *argv[]) {
 	int NumOfEntry;
 	int32_t FilenameSize;
 	char Filename[1024];
-	char fname[1024];
 	uint8_t FileHash[20];
 	uint64_t FileOffset = 0;
 	uint64_t FileSize = 0;
@@ -320,8 +323,8 @@ int main(int argc, const char *argv[]) {
 				read_data(Filename, IndexData, FilenameSize);
 			} else {
 				// filename is unicode
-				read_data(fname, IndexData, -FilenameSize * 2);
-				unicode_to_utf8(fname, -FilenameSize * 2, Filename, sizeof(Filename));
+				read_data(Filename, IndexData, -FilenameSize * 2);
+				unicode_to_utf8(Filename, -FilenameSize * 2, Filename, sizeof(Filename));
 			}
 			
 			read_data(&ENTRY, IndexData, 4);
@@ -377,13 +380,6 @@ void extract(int PakFile, Entry entry, char *filename) {
 			if (entry.CompressionMethod == 1) {
 				if ((DecompressLength = zlib_decompress(CompressedData, entry.blocks[x].end - entry.blocks[x].start, DecompressedData, CHUNK_SIZE)) == -1) {
 					fprintf(stderr, "ZLIB Decompression failed\n");
-					exit(1);
-				}
-			} else if (entry.CompressionMethod == 6) {
-				DecompressLength = ZSTD_decompress(DecompressedData, CHUNK_SIZE, CompressedData, entry.blocks[x].end - entry.blocks[x].start);
-				
-				if (ZSTD_isError(DecompressLength)) {
-					fprintf(stderr, "ZSTD Decompression failed: %s\n", ZSTD_getErrorName(DecompressLength));
 					exit(1);
 				}
 			} else {
