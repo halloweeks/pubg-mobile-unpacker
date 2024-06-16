@@ -385,6 +385,7 @@ void extract(int PakFile, Entry entry, char *filename) {
 			} else {
 				printf("Unknown compression method %u\n", entry.CompressionMethod);
 				close(OutFile);
+				exit(1);
 			}
 			
 			write(OutFile, DecompressedData, DecompressLength);
