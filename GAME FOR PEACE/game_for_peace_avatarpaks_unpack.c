@@ -1,7 +1,7 @@
 /*
  *  Author: Halloweeks.
  *  Date: 2024-05-30.
- *  Description: Extract game for peace pak contents. 
+ *  Description: it's only extract game for peace avatarpaks and enc folder pak file contents. 
  *  GitHub: https://github.com/halloweeks/pubg-mobile-unpacker
 */
 
