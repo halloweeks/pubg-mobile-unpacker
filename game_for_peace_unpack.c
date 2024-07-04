@@ -81,32 +81,33 @@ int create_file(const char *fullPath) {
 	return open(fullPath, O_WRONLY | O_CREAT | O_TRUNC, 0644); 
 }
 
-// Function to decompress using zlib
-int32_t zlib_decompress(uint8_t *CompressedData, uint32_t CompressedSize, uint8_t *DecompressedData, uint32_t DecompressedSize) {
+unsigned int ZLIB_decompress(unsigned char *InData, unsigned int InSize, unsigned char *OutData, unsigned int OutSize) {
 	z_stream strm;
 	strm.zalloc = Z_NULL;
 	strm.zfree = Z_NULL;
 	strm.opaque = Z_NULL;
-	strm.avail_in = CompressedSize;
-	strm.next_in = CompressedData;
-	strm.avail_out = DecompressedSize;
-	strm.next_out = DecompressedData;
+	strm.next_in = InData;
+	strm.avail_in = InSize;
+	strm.next_out = OutData;
+	strm.avail_out = OutSize;
 	
 	if (inflateInit(&strm) != Z_OK) {
 		fprintf(stderr, "Failed to initialize zlib.\n");
-		return -1;
+		return 0;
 	}
 	
-	int ret = inflate(&strm, Z_FINISH);
-	
-	inflateEnd(&strm);
-	
-	if (ret != Z_STREAM_END) {
-		fprintf(stderr, "Failed to decompress data: %s\n", zError(ret));
-		return -1;
+	if (inflate(&strm, Z_FINISH) != Z_STREAM_END) {
+		fprintf(stderr, "inflate failed: %s\n", strm.msg);
+		inflateEnd(&strm);
+		return 0;
 	}
 	
-	return DecompressedSize - strm.avail_out;
+	if (inflateEnd(&strm) != Z_OK) {
+		fprintf(stderr, "inflateEnd failed: %s\n", strm.msg);
+		return 0;
+	}
+	
+	return strm.total_out;
 }
 
 // Global variable to track current index offset during reading
@@ -381,7 +382,7 @@ void extract(int PakFile, Entry entry, char *filename) {
 			}
 			
 			if (entry.CompressionMethod == 1) {
-				if ((DecompressLength = zlib_decompress(CompressedData, entry.blocks[x].end - entry.blocks[x].start, DecompressedData, CHUNK_SIZE)) == -1) {
+				if ((DecompressLength = ZLIB_decompress(CompressedData, entry.blocks[x].end - entry.blocks[x].start, DecompressedData, CHUNK_SIZE)) == 0) {
 					fprintf(stderr, "ZLIB Decompression failed\n");
 					exit(1);
 				}
