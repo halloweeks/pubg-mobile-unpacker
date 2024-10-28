@@ -39,20 +39,6 @@ typedef struct {
 } __attribute__((packed)) CompressionBlock;
 
 
-typedef struct {
-	uint8_t FileHash[20];
-	uint64_t FileOffset;
-	uint64_t FileSize;
-	uint32_t CompressionMethod;
-	uint64_t UncompressedSize;
-	uint8_t Dummy[21];
-	uint32_t NumOfBlocks;
-	CompressionBlock *blocks;
-	uint32_t CompressedBlockSize;
-	uint8_t Encrypted;
-} __attribute__((packed)) Entry;
-
-
 // Function to decrypt data
 void DecryptData(uint8_t *data, uint32_t size, const uint8_t *key) {
 	AES_CTX ctx;
