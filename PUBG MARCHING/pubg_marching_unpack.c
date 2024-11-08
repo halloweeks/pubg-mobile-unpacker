@@ -335,7 +335,7 @@ int main(int argc, const char *argv[]) {
 			}
 		} else {
 			// Uncompressed data
-			lseek(PakFile, FileOffset + 74, SEEK_SET);
+			lseek(PakFile, FileOffset, SEEK_SET);
 			
 			ssize_t bytesRead, bytesWritten;
 			
