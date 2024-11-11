@@ -23,7 +23,7 @@ Ensure compatibility with the version specified, and be aware of the limitations
 **How to Use:**
 
 ```bash
-./pubg_mobile_unpack.exe <path_to_pak_file>
+./pubg_mobile_unpack <path_to_pak_file>
 ```
 
 **Build Instructions:**
@@ -31,13 +31,13 @@ Ensure compatibility with the version specified, and be aware of the limitations
 To build the executable, use the following command:
 
 ```bash
-cc pubg_mobile_unpack.c -o pubg_mobile_unpack.exe -lz -lzstd -liconv -O2
+cc pubg_mobile_unpack.c -o pubg_mobile_unpack -lz -lzstd -liconv -O2
 ```
 
 for pubg mobile chinese (game for peace) version
 
 ```bash
-cc game_for_peace_unpack.c -o game_for_peace_unpack.exe -lz -O2
+cc game_for_peace_unpack.c -o game_for_peace_unpack -lz -O2
 ```
 
 **pubgm pak file structure:**
